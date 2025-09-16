@@ -1,4 +1,4 @@
-# extend-service-extension-go
+# extend-service-extension-mongodb-go
 
 ```mermaid
 flowchart LR
@@ -19,10 +19,10 @@ web service created using a stack that includes a `gRPC Server` and the
 ## Overview
 
 This repository provides a project template for an `Extend Service Extension` 
-app written in `Go`. It includes an example of a custom guild service which has 
-two endpoints to create and get guild progress data. Additionally, it comes 
-with built-in instrumentation for observability, ensuring that metrics, traces, 
-and logs are available upon deployment.
+app written in `Go` which uses MongoDB to store its data. It includes an example 
+of a custom guild service which has two endpoints to create and get guild progress data. 
+Additionally, it comes with built-in instrumentation for observability, ensuring that metrics, 
+traces, and logs are available upon deployment.
 
 You can clone this repository to begin developing your own 
 `Extend Service Extension` app. Simply modify this project by defining your 
@@ -172,12 +172,14 @@ To be able to run this app, you will need to follow these setup steps.
 2. Fill in the required environment variables in `.env` file as shown below.
 
    ```
-   AB_BASE_URL='http://test.accelbyte.io'    # Your environment's domain Base URL
-   AB_CLIENT_ID='xxxxxxxxxx'                 # Client ID from the Prerequisites section
-   AB_CLIENT_SECRET='xxxxxxxxxx'             # Client Secret from the Prerequisites section
-   AB_NAMESPACE='xxxxxxxxxx'                 # Namespace ID from the Prerequisites section
-   PLUGIN_GRPC_SERVER_AUTH_ENABLED=true      # Enable or disable access token and permission validation
-   BASE_PATH='/guild'                        # The base path used for the app
+   AB_BASE_URL='http://test.accelbyte.io'                # Your environment's domain Base URL
+   AB_CLIENT_ID='xxxxxxxxxx'                             # Client ID from the Prerequisites section
+   AB_CLIENT_SECRET='xxxxxxxxxx'                         # Client Secret from the Prerequisites section
+   AB_NAMESPACE='xxxxxxxxxx'                             # Namespace ID from the Prerequisites section
+   BASE_PATH='/guild'                                    # The base path used for the app
+   MONGODB_URI=mongodb://admin:password@mongodb:27017    # MongoDB connection string
+   MONGODB_DATABASE=guild_service                        # MongoDB database name
+   PLUGIN_GRPC_SERVER_AUTH_ENABLED=true                  # Enable or disable access token and permission validation
    ```
 
    > :exclamation: **In this app, PLUGIN_GRPC_SERVER_AUTH_ENABLED is `true` by default**: If it is set to `false`, the endpoint `permission.action` and `permission.resource`  validation will be disabled and the endpoint can be accessed without a valid access token. This option is provided for development purpose only.

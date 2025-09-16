@@ -23,8 +23,6 @@ import (
 
 	"github.com/go-openapi/loads"
 
-	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/cloudsave"
-
 	"extend-custom-guild-service/pkg/common"
 
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/repository"
@@ -62,7 +60,7 @@ const (
 var (
 	serviceName = common.GetEnv("OTEL_SERVICE_NAME", "ExtendCustomServiceGo")
 	logLevelStr = common.GetEnv("LOG_LEVEL", logrus.InfoLevel.String())
-	basePath	= common.GetBasePath()
+	basePath    = common.GetBasePath()
 )
 
 func main() {
@@ -144,16 +142,26 @@ func main() {
 		logrus.Fatalf("Error unable to login using clientId and clientSecret: %v", err)
 	}
 
-	// Initialize the AccelByte CloudSave service
-	adminGameRecordService := cloudsave.AdminGameRecordService{
-		Client:          factory.NewCloudsaveClient(configRepo),
-		TokenRepository: tokenRepo,
+	// Initialize MongoDB storage
+	mongoConnectionString := common.GetEnv("MONGODB_URI", "mongodb://admin:password@mongodb:27017")
+	mongoDatabase := common.GetEnv("MONGODB_DATABASE", "guild_service")
+
+	mongoStorage, err := storage.NewMongoDBStorage(mongoConnectionString, mongoDatabase)
+	if err != nil {
+		logrus.Fatalf("Failed to initialize MongoDB storage: %v", err)
 	}
 
-	cloudSaveStorage := storage.NewCloudSaveStorage(&adminGameRecordService)
+	// Ensure MongoDB connection is closed when the application shuts down
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := mongoStorage.Close(ctx); err != nil {
+			logrus.Errorf("Error closing MongoDB connection: %v", err)
+		}
+	}()
 
 	// Register Guild Service
-	myServiceServer := service.NewMyServiceServer(tokenRepo, configRepo, refreshRepo, cloudSaveStorage)
+	myServiceServer := service.NewMyServiceServer(tokenRepo, configRepo, refreshRepo, mongoStorage)
 	pb.RegisterServiceServer(s, myServiceServer)
 
 	// Enable gRPC Reflection
@@ -217,7 +225,7 @@ func main() {
 		),
 	)
 
-	// Start gRPC Server	
+	// Start gRPC Server
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcServerPort))
 	if err != nil {
 		logrus.Fatalf("Failed to listen to tcp:%d: %v", grpcServerPort, err)

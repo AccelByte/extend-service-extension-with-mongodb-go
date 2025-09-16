@@ -10,14 +10,18 @@ services:
       - AB_CLIENT_SECRET=${AB_CLIENT_SECRET}
       - AB_BASE_URL=${AB_BASE_URL}
       - AB_NAMESPACE=${AB_NAMESPACE}
+      - BASE_PATH=${BASE_PATH}
       - PLUGIN_GRPC_SERVER_AUTH_ENABLED
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DATABASE=${MONGODB_DATABASE}
       - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://host.docker.internal:9411/api/v2/spans # Zipkin
       - OTEL_SERVICE_NAME=ExtendServiceExtensionServerGo
-      - BASE_PATH
       # - GRPC_GO_LOG_VERBOSITY_LEVEL="99" # enable to debug grpc
       # - GRPC_GO_LOG_SEVERITY_LEVEL=info # enable to debug grpc
     extra_hosts:
       - host.docker.internal:host-gateway
+    depends_on:
+      - mongodb
     # logging:
     #   driver: loki
     #   options:
@@ -25,3 +29,10 @@ services:
     #     mode: non-blocking
     #     max-buffer-size: 4m
     #     loki-retries: "3"
+  mongodb:
+    image: mongo:8.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
