@@ -291,7 +291,7 @@ will be accessible at http://localhost:3000.
 
 After completing testing, the next step is to deploy your app to `AccelByte Gaming Services`.
 
-1. **Create an Extend Service Extension app**
+1. **Create an Extend Service Extension app with managed database**
 
    If you do not already have one, create a new [Extend Service Extension App](https://docs.accelbyte.io/gaming-services/services/extend/service-extension/getting-started-service-extension/#create-the-extend-app).
 
