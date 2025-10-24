@@ -19,7 +19,7 @@ web service created using a stack that includes a `gRPC Server` and the
 ## Overview
 
 This repository provides a project template for an `Extend Service Extension` 
-app written in `Go` which uses MongoDB to store its data. It includes an example 
+app written in `Go` which uses DocDB to store its data. It includes an example 
 of a custom guild service which has two endpoints to create and get guild progress data. 
 Additionally, it comes with built-in instrumentation for observability, ensuring that metrics, 
 traces, and logs are available upon deployment.
@@ -177,10 +177,10 @@ To be able to run this app, you will need to follow these setup steps.
    AB_CLIENT_SECRET='xxxxxxxxxx'                         # Client Secret from the Prerequisites section
    AB_NAMESPACE='xxxxxxxxxx'                             # Namespace ID from the Prerequisites section
    BASE_PATH='/guild'                                    # The base path used for the app
-   DOCDB_HOST=mongodb:27017                              # MongoDB host
-   DOCDB_USERNAME=admin                                  # MongoDB admin
-   DOCDB_PASSWORD=password                               # MongoDB password
-   DOCDB_DATABASE_NAME=guild_service                     # MongoDB database name
+   DOCDB_HOST=mongodb:27017                              # DocDB host
+   DOCDB_USERNAME=admin                                  # DocDB admin
+   DOCDB_PASSWORD=password                               # DocDB password
+   DOCDB_DATABASE_NAME=guild_service                     # DocDB database name
    PLUGIN_GRPC_SERVER_AUTH_ENABLED=true                  # Enable or disable access token and permission validation
    ```
 
@@ -293,7 +293,7 @@ will be accessible at http://localhost:3000.
 
 After completing testing, the next step is to deploy your app to `AccelByte Gaming Services`.
 
-1. **Create an Extend Service Extension app with managed database**
+1. **Create an Extend Service Extension app with Extend NoSQL Database**
 
    If you do not already have one, create a new [Extend Service Extension App](https://docs.accelbyte.io/gaming-services/services/extend/service-extension/getting-started-service-extension/#create-the-extend-app).
 
