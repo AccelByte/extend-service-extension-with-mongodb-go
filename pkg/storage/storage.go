@@ -11,9 +11,9 @@ import (
 
 	pb "extend-custom-guild-service/pkg/pb"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -43,7 +43,7 @@ func NewMongoDBStorage(connectionString, databaseName string) (*MongoDBStorage, 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connectionString))
+	client, err := mongo.Connect(options.Client().ApplyURI(connectionString))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
@@ -99,7 +99,7 @@ func (m *MongoDBStorage) SaveGuildProgress(ctx context.Context, namespace string
 		},
 	}
 
-	opts := options.Update().SetUpsert(true)
+	opts := options.UpdateOne().SetUpsert(true)
 	_, err := m.collection.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Error saving guild progress to MongoDB: %v", err)
