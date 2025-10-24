@@ -177,8 +177,10 @@ To be able to run this app, you will need to follow these setup steps.
    AB_CLIENT_SECRET='xxxxxxxxxx'                         # Client Secret from the Prerequisites section
    AB_NAMESPACE='xxxxxxxxxx'                             # Namespace ID from the Prerequisites section
    BASE_PATH='/guild'                                    # The base path used for the app
-   MONGODB_URI=mongodb://admin:password@mongodb:27017    # MongoDB connection string
-   MONGODB_DATABASE=guild_service                        # MongoDB database name
+   DOCDB_HOST=mongodb:27017                              # MongoDB host
+   DOCDB_USERNAME=admin                                  # MongoDB admin
+   DOCDB_PASSWORD=password                               # MongoDB password
+   DOCDB_DATABASE_NAME=guild_service                     # MongoDB database name
    PLUGIN_GRPC_SERVER_AUTH_ENABLED=true                  # Enable or disable access token and permission validation
    ```
 

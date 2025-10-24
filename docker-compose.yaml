@@ -12,8 +12,10 @@ services:
       - AB_NAMESPACE=${AB_NAMESPACE}
       - BASE_PATH=${BASE_PATH}
       - PLUGIN_GRPC_SERVER_AUTH_ENABLED
-      - MONGODB_URI=${MONGODB_URI}
-      - MONGODB_DATABASE=${MONGODB_DATABASE}
+      - DOCDB_HOST=${DOCDB_HOST}
+      - DOCDB_USERNAME=${DOCDB_USERNAME}
+      - DOCDB_PASSWORD=${DOCDB_PASSWORD}
+      - DOCDB_DATABASE_NAME=${DOCDB_DATABASE_NAME}
       - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://host.docker.internal:9411/api/v2/spans # Zipkin
       - OTEL_SERVICE_NAME=ExtendServiceExtensionServerGo
       # - GRPC_GO_LOG_VERBOSITY_LEVEL="99" # enable to debug grpc

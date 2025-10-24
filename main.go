@@ -143,8 +143,11 @@ func main() {
 	}
 
 	// Initialize MongoDB storage
-	mongoConnectionString := common.GetEnv("MONGODB_URI", "mongodb://admin:password@mongodb:27017")
-	mongoDatabase := common.GetEnv("MONGODB_DATABASE", "guild_service")
+	docdbHost := common.GetEnv("DOCDB_HOST", "mongodb:27017")
+	docdbUsername := common.GetEnv("DOCDB_USERNAME", "admin")
+	docdbPassword := common.GetEnv("DOCDB_PASSWORD", "password")
+	mongoConnectionString := fmt.Sprintf("mongodb://%s:%s@%s", docdbUsername, docdbPassword, docdbHost)
+	mongoDatabase := common.GetEnv("DOCDB_DATABASE_NAME", "guild_service")
 
 	mongoStorage, err := storage.NewMongoDBStorage(mongoConnectionString, mongoDatabase)
 	if err != nil {
