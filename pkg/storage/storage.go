@@ -39,13 +39,15 @@ type MongoDBStorage struct {
 	collection *mongo.Collection
 }
 
-func NewMongoDBStorage(connectionString, databaseName string) (*MongoDBStorage, error) {
+func NewMongoDBStorage(connectionString, databaseName string, minPoolSize, maxPoolSize uint64) (*MongoDBStorage, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	client, err := mongo.Connect(options.Client().
 		ApplyURI(connectionString).
-		SetRetryWrites(false))
+		SetRetryWrites(false).
+		SetMinPoolSize(minPoolSize).
+		SetMaxPoolSize(maxPoolSize))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}

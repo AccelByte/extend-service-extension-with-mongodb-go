@@ -148,8 +148,10 @@ func main() {
 	docdbPassword := common.GetEnv("DOCDB_PASSWORD", "password")
 	mongoConnectionString := fmt.Sprintf("mongodb://%s:%s@%s", docdbUsername, docdbPassword, docdbHost)
 	mongoDatabase := common.GetEnv("DOCDB_DATABASE_NAME", "guild_service")
+	minPoolSize := uint64(common.GetEnvInt("DOCDB_MIN_POOL_SIZE", 5))
+	maxPoolSize := uint64(common.GetEnvInt("DOCDB_MAX_POOL_SIZE", 30))
 
-	mongoStorage, err := storage.NewMongoDBStorage(mongoConnectionString, mongoDatabase)
+	mongoStorage, err := storage.NewMongoDBStorage(mongoConnectionString, mongoDatabase, minPoolSize, maxPoolSize)
 	if err != nil {
 		logrus.Fatalf("Failed to initialize MongoDB storage: %v", err)
 	}
