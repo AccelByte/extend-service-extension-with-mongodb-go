@@ -3,7 +3,7 @@ module extend-custom-guild-service
 go 1.24
 
 require (
-	github.com/AccelByte/accelbyte-go-sdk v0.80.0
+	github.com/AccelByte/accelbyte-go-sdk v0.85.0
 	github.com/go-openapi/loads v0.22.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.1
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
