@@ -7,34 +7,36 @@ package common
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
-	"github.com/sirupsen/logrus"
 )
 
-// InterceptorLogger adapts logrus logger to interceptor logger.
+// InterceptorLogger adapts slog logger to interceptor logger.
 // This code is referenced from https://github.com/grpc-ecosystem/go-grpc-middleware/
-func InterceptorLogger(l logrus.FieldLogger) logging.Logger {
-	return logging.LoggerFunc(func(_ context.Context, lvl logging.Level, msg string, fields ...any) {
-		f := make(map[string]any, len(fields)/2)
-		i := logging.Fields(fields).Iterator()
-		if i.Next() {
-			k, v := i.At()
-			f[k] = v
+func InterceptorLogger(logger *slog.Logger) logging.Logger {
+	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
+		attrs := make([]slog.Attr, 0, len(fields)/2)
+		iterator := logging.Fields(fields).Iterator()
+		for iterator.Next() {
+			fieldName, fieldValue := iterator.At()
+			attrs = append(attrs, slog.Any(fieldName, fieldValue))
 		}
-		l = l.WithFields(f)
 
+		var slogLevel slog.Level
 		switch lvl {
 		case logging.LevelDebug:
-			l.Debug(msg)
+			slogLevel = slog.LevelDebug
 		case logging.LevelInfo:
-			l.Info(msg)
+			slogLevel = slog.LevelInfo
 		case logging.LevelWarn:
-			l.Warn(msg)
+			slogLevel = slog.LevelWarn
 		case logging.LevelError:
-			l.Error(msg)
+			slogLevel = slog.LevelError
 		default:
 			panic(fmt.Sprintf("unknown level %v", lvl))
 		}
+
+		logger.LogAttrs(ctx, slogLevel, msg, attrs...)
 	})
 }

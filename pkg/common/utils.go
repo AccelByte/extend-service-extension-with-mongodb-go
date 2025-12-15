@@ -5,11 +5,10 @@
 package common
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
 
 func GetEnv(key, fallback string) string {
@@ -33,10 +32,12 @@ func GetEnvInt(key string, fallback int) int {
 func GetBasePath() string {
 	basePath := os.Getenv("BASE_PATH")
 	if basePath == "" {
-		logrus.Fatalf("BASE_PATH envar is not set or empty")
+		slog.Default().Error("BASE_PATH envar is not set or empty")
+		os.Exit(1)
 	}
 	if !strings.HasPrefix(basePath, "/") {
-		logrus.Fatalf("BASE_PATH envar is invalid, no leading '/' found. Valid example: /basePath")
+		slog.Default().Error("BASE_PATH envar is invalid, no leading '/' found. Valid example: /basePath")
+		os.Exit(1)
 	}
 
 	return basePath

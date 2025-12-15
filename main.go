@@ -12,6 +12,7 @@ import (
 	"extend-custom-guild-service/pkg/storage"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -32,7 +33,6 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
@@ -59,22 +59,44 @@ const (
 
 var (
 	serviceName = common.GetEnv("OTEL_SERVICE_NAME", "ExtendCustomServiceGo")
-	logLevelStr = common.GetEnv("LOG_LEVEL", logrus.InfoLevel.String())
+	logLevelStr = common.GetEnv("LOG_LEVEL", "info")
 	basePath    = common.GetBasePath()
 )
 
+// parseSlogLevel converts string log level to slog.Level
+func parseSlogLevel(levelStr string) slog.Level {
+	switch strings.ToLower(levelStr) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error", "fatal", "panic":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
+
 func main() {
-	logrus.Infof("Starting %s...", serviceName)
+	var err error
+
+	// Parse log level from environment variable
+	slogLevel := parseSlogLevel(logLevelStr)
+
+	// Create JSON handler for structured logging
+	opts := &slog.HandlerOptions{
+		Level: slogLevel,
+	}
+	handler := slog.NewJSONHandler(os.Stdout, opts)
+	logger := slog.New(handler)
+	slog.SetDefault(logger) // Set as default logger for the application
+
+	logger.Info("Starting service", "serviceName", serviceName)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	logrusLevel, err := logrus.ParseLevel(logLevelStr)
-	if err != nil {
-		logrusLevel = logrus.InfoLevel
-	}
-	logrusLogger := logrus.New()
-	logrusLogger.SetLevel(logrusLevel)
 
 	loggingOptions := []logging.Option{
 		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall, logging.PayloadReceived, logging.PayloadSent),
@@ -91,11 +113,11 @@ func main() {
 
 	unaryServerInterceptors := []grpc.UnaryServerInterceptor{
 		prometheusGrpc.UnaryServerInterceptor,
-		logging.UnaryServerInterceptor(common.InterceptorLogger(logrusLogger), loggingOptions...),
+		logging.UnaryServerInterceptor(common.InterceptorLogger(logger), loggingOptions...),
 	}
 	streamServerInterceptors := []grpc.StreamServerInterceptor{
 		prometheusGrpc.StreamServerInterceptor,
-		logging.StreamServerInterceptor(common.InterceptorLogger(logrusLogger), loggingOptions...),
+		logging.StreamServerInterceptor(common.InterceptorLogger(logger), loggingOptions...),
 	}
 
 	// Preparing the IAM authorization
@@ -115,7 +137,7 @@ func main() {
 		common.Validator = common.NewTokenValidator(oauthService, time.Duration(refreshInterval)*time.Second, true)
 		err := common.Validator.Initialize(ctx)
 		if err != nil {
-			logrus.Infof(err.Error())
+			logger.Info(err.Error())
 		}
 
 		permissionExtractor := common.NewProtoPermissionExtractor()
@@ -124,7 +146,7 @@ func main() {
 
 		unaryServerInterceptors = append(unaryServerInterceptors, unaryServerInterceptor)
 		streamServerInterceptors = append(streamServerInterceptors, serverServerInterceptor)
-		logrus.Infof("added auth interceptors")
+		logger.Info("added auth interceptors")
 	}
 
 	// Create gRPC Server
@@ -139,7 +161,8 @@ func main() {
 	clientSecret := configRepo.GetClientSecret()
 	err = oauthService.LoginClient(&clientId, &clientSecret)
 	if err != nil {
-		logrus.Fatalf("Error unable to login using clientId and clientSecret: %v", err)
+		logger.Error("Error unable to login using clientId and clientSecret", "error", err)
+		os.Exit(1)
 	}
 
 	// Initialize MongoDB storage
@@ -153,7 +176,8 @@ func main() {
 
 	mongoStorage, err := storage.NewMongoDBStorage(mongoConnectionString, mongoDatabase, minPoolSize, maxPoolSize)
 	if err != nil {
-		logrus.Fatalf("Failed to initialize MongoDB storage: %v", err)
+		logger.Error("Failed to initialize MongoDB storage", "error", err)
+		os.Exit(1)
 	}
 
 	// Ensure MongoDB connection is closed when the application shuts down
@@ -161,7 +185,7 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := mongoStorage.Close(ctx); err != nil {
-			logrus.Errorf("Error closing MongoDB connection: %v", err)
+			logger.Error("Error closing MongoDB connection", "error", err)
 		}
 	}()
 
@@ -178,16 +202,18 @@ func main() {
 	// Create a new HTTP server for the gRPC-Gateway
 	grpcGateway, err := common.NewGateway(ctx, fmt.Sprintf("localhost:%d", grpcServerPort), basePath)
 	if err != nil {
-		logrus.Fatalf("Failed to create gRPC-Gateway: %v", err)
+		logger.Error("Failed to create gRPC-Gateway", "error", err)
+		os.Exit(1)
 	}
 
 	// Start the gRPC-Gateway HTTP server
 	go func() {
 		swaggerDir := "gateway/apidocs" // Path to swagger directory
-		grpcGatewayHTTPServer := newGRPCGatewayHTTPServer(fmt.Sprintf(":%d", grpcGatewayHTTPPort), grpcGateway, logrus.New(), swaggerDir)
-		logrus.Infof("Starting gRPC-Gateway HTTP server on port %d", grpcGatewayHTTPPort)
+		grpcGatewayHTTPServer := newGRPCGatewayHTTPServer(fmt.Sprintf(":%d", grpcGatewayHTTPPort), grpcGateway, logger, swaggerDir)
+		logger.Info("Starting gRPC-Gateway HTTP server", "port", grpcGatewayHTTPPort)
 		if err := grpcGatewayHTTPServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logrus.Fatalf("Failed to run gRPC-Gateway HTTP server: %v", err)
+			logger.Error("Failed to run gRPC-Gateway HTTP server", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -203,21 +229,24 @@ func main() {
 
 	go func() {
 		http.Handle(metricsEndpoint, promhttp.HandlerFor(prometheusRegistry, promhttp.HandlerOpts{}))
-		logrus.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", metricsPort), nil))
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", metricsPort), nil); err != nil {
+			logger.Error("Metrics server failed", "error", err)
+			os.Exit(1)
+		}
 	}()
-	logrus.Infof("Metrics endpoint: (:%d%s)", metricsPort, metricsEndpoint)
+	logger.Info("Metrics endpoint ready", "port", metricsPort, "endpoint", metricsEndpoint)
 
 	// Set Tracer Provider
 	tracerProvider, err := common.NewTracerProvider(serviceName)
 	if err != nil {
-		logrus.Fatalf("Failed to create tracer provider: %v", err)
-
-		return
+		logger.Error("Failed to create tracer provider", "error", err)
+		os.Exit(1)
 	}
 	otel.SetTracerProvider(tracerProvider)
 	defer func(ctx context.Context) {
 		if err := tracerProvider.Shutdown(ctx); err != nil {
-			logrus.Fatal(err)
+			logger.Error("Failed to shutdown tracer provider", "error", err)
+			os.Exit(1)
 		}
 	}(ctx)
 
@@ -233,28 +262,26 @@ func main() {
 	// Start gRPC Server
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcServerPort))
 	if err != nil {
-		logrus.Fatalf("Failed to listen to tcp:%d: %v", grpcServerPort, err)
-
-		return
+		logger.Error("Failed to listen to tcp", "port", grpcServerPort, "error", err)
+		os.Exit(1)
 	}
 	go func() {
 		if err = s.Serve(lis); err != nil {
-			logrus.Fatalf("Failed to run gRPC server: %v", err)
-
-			return
+			logger.Error("Failed to run gRPC server", "error", err)
+			os.Exit(1)
 		}
 	}()
 
-	logrus.Infof("%s started", serviceName)
+	logger.Info("Service started", "serviceName", serviceName)
 
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	<-ctx.Done()
-	logrus.Infof("SIGTERM received")
+	logger.Info("SIGTERM received, shutting down")
 }
 
 func newGRPCGatewayHTTPServer(
-	addr string, handler http.Handler, logger *logrus.Logger, swaggerDir string,
+	addr string, handler http.Handler, logger *slog.Logger, swaggerDir string,
 ) *http.Server {
 	// Create a new ServeMux
 	mux := http.NewServeMux()
@@ -277,16 +304,12 @@ func newGRPCGatewayHTTPServer(
 }
 
 // loggingMiddleware is a middleware that logs HTTP requests
-func loggingMiddleware(logger *logrus.Logger, next http.Handler) http.Handler {
+func loggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		next.ServeHTTP(w, r)
 		duration := time.Since(start)
-		logger.WithFields(logrus.Fields{
-			"method":   r.Method,
-			"path":     r.URL.Path,
-			"duration": duration,
-		}).Info("HTTP request")
+		logger.Info("HTTP request", "method", r.Method, "path", r.URL.Path, "duration", duration)
 	})
 }
 
