@@ -4,14 +4,36 @@
 
 SHELL := /bin/bash
 
-.PHONY: proto build
+PROJECT_NAME := $(shell basename "$$(pwd)")
+GOLANG_IMAGE := golang:1.24
+PROTOC_IMAGE := proto-builder
 
-proto:
+BUILD_CACHE_VOLUME := $(shell echo '$(PROJECT_NAME)' | sed 's/[^a-zA-Z0-9_-]//g')-build-cache
+
+build: prepare_build_cache
+	docker run -t --rm \
+			-u $$(id -u):$$(id -g) \
+			-e GOCACHE=/tmp/build-cache/go/cache \
+			-e GOMODCACHE=/tmp/build-cache/go/modcache \
+			-v $(BUILD_CACHE_VOLUME):/tmp/build-cache \
+			-v $$(pwd):/data/ \
+			-w /data/ \
+			$(GOLANG_IMAGE) \
+			go build -modcacherw
+
+proto_image:
+	docker build --target proto-builder -t $(PROTOC_IMAGE) .
+
+proto: proto_image
 	docker run --tty --rm --user $$(id -u):$$(id -g) \
 		--volume $$(pwd):/build \
 		--workdir /build \
 		--entrypoint /bin/bash \
-		rvolosatovs/protoc:4.1.0 \
+		$(PROTOC_IMAGE) \
 			proto.sh
 
-build: proto
+prepare_build_cache:
+	docker run -t --rm \
+			-v $(BUILD_CACHE_VOLUME):/tmp/build-cache \
+			busybox:1.37.0 \
+			chown $$(id -u):$$(id -g) /tmp/build-cache		# Fix /tmp/build-cache folder owned by root
