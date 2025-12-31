@@ -4,35 +4,53 @@ set -eou pipefail
 
 shopt -s globstar
 
+find_all_proto_files() {
+  find "${PROTO_DIR}" -name "*.proto" -type f
+}
+
 PROTO_DIR="${1:-pkg/proto}"
 OUT_DIR="${2:-pkg/pb}"
-APIDOCS_DIR="${4:-gateway/apidocs}"
+APIDOCS_DIR="${3:-gateway/apidocs}"
 
-# Ensure output directory exists
-mkdir -p "${OUT_DIR}"
+# Clean previously generated files.
+rm -rf "${OUT_DIR:?}"/* && \
+  mkdir -p "${OUT_DIR:?}"
 
-# Clean previously generated files
-find "${OUT_DIR}" -type f \( -name '*.go' \) -delete
+# Clean previously generated swagger files.
+rm -rf "${APIDOCS_DIR:?}"/* && \
+  mkdir -p "${APIDOCS_DIR}"
 
-# Generate protobuf files.
-protoc-wrapper \
-  --proto_path="${PROTO_DIR}" \
+# Step 1: Generate Go code for ALL proto files
+protoc \
+  -I "${PROTO_DIR}" \
   --go_out="${OUT_DIR}" \
   --go_opt=paths=source_relative \
   --go-grpc_out="${OUT_DIR}" \
-  --go-grpc_opt=paths=source_relative \
-  "${PROTO_DIR}"/**/*.proto
-
-# Clean previously generated files.
-rm -rf "${APIDOCS_DIR}"/* && \
-  mkdir -p "${APIDOCS_DIR}"
-
-# Generate the swagger.json
-protoc-wrapper \
-  --proto_path="${PROTO_DIR}" \
-  --grpc-gateway_out="${OUT_DIR}" \
-  --grpc-gateway_opt=logtostderr=true \
+  --go-grpc_opt=paths=source_relative,require_unimplemented_servers=false \
+  --grpc-gateway_out=logtostderr=true:"${OUT_DIR}" \
   --grpc-gateway_opt=paths=source_relative \
-  --openapiv2_out="${APIDOCS_DIR}" \
+  $(find_all_proto_files)
+
+# Step 2: Generate OpenAPI/Swagger ONLY for service.proto (the one with HTTP endpoints)
+protoc \
+  -I "${PROTO_DIR}" \
+  --openapiv2_out "${APIDOCS_DIR}" \
   --openapiv2_opt=logtostderr=true \
   "${PROTO_DIR}"/service.proto
+
+
+# Generate protobuf, gateway, swagger files
+# protoc \
+#   -I "${PROTO_DIR}" \
+#   --go_out="${OUT_DIR}" \
+#   --go_opt=paths=source_relative \
+#   --go-grpc_out="${OUT_DIR}" \
+#   --go-grpc_opt=paths=source_relative,require_unimplemented_servers=false \
+#   --grpc-gateway_out=logtostderr=true:"${OUT_DIR}" \
+#   --grpc-gateway_opt=paths=source_relative \
+#   --openapiv2_out "${APIDOCS_DIR}" \
+#   --openapiv2_opt=logtostderr=true \
+#   "${PROTO_DIR}"/service.proto "${PROTO_DIR}"/permission.proto
+
+# Remove google directory since the protobuf package already includes it.
+#rm -rf src/google
