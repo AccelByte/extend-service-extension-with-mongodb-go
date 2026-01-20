@@ -17,7 +17,6 @@ services:
       - DOCDB_PASSWORD=${DOCDB_PASSWORD}
       - DOCDB_DATABASE_NAME=${DOCDB_DATABASE_NAME}
       - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://host.docker.internal:9411/api/v2/spans # Zipkin
-      - OTEL_SERVICE_NAME=ExtendServiceExtensionServerGo
       # - GRPC_GO_LOG_VERBOSITY_LEVEL="99" # enable to debug grpc
       # - GRPC_GO_LOG_SEVERITY_LEVEL=info # enable to debug grpc
     extra_hosts:
