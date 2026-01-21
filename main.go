@@ -167,7 +167,9 @@ func main() {
 	docdbHost := common.GetEnv("DOCDB_HOST", "mongodb:27017")
 	docdbUsername := common.GetEnv("DOCDB_USERNAME", "admin")
 	docdbPassword := common.GetEnv("DOCDB_PASSWORD", "password")
-	mongoConnectionString := fmt.Sprintf("mongodb://%s:%s@%s", docdbUsername, docdbPassword, docdbHost)
+	docdbCaCertFilePath := common.GetEnv("DOCDB_CA_CERT_FILE_PATH", "")
+	mongoConnectionString := fmt.Sprintf("mongodb://%s:%s@%s/?tls=true&tlsCAFile=%s", docdbUsername, docdbPassword, docdbHost, docdbCaCertFilePath)
+
 	mongoDatabase := common.GetEnv("DOCDB_DATABASE_NAME", "guild_service")
 	minPoolSize := uint64(common.GetEnvInt("DOCDB_MIN_POOL_SIZE", 5))
 	maxPoolSize := uint64(common.GetEnvInt("DOCDB_MAX_POOL_SIZE", 30))
