@@ -5,7 +5,7 @@
 # ----------------------------------------
 # Stage 1: Protoc Code Generation
 # ----------------------------------------
-FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS proto-builder
+FROM --platform=$BUILDPLATFORM ubuntu:26.04 AS proto-builder
 
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
