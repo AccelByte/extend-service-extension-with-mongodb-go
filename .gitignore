@@ -237,3 +237,4 @@ extend-custom-guild-service
 
 .env*
 !.env.template
+./.idea
