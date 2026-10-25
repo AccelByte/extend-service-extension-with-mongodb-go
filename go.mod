@@ -20,7 +20,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.45.0
 	go.uber.org/mock v0.2.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa
-	google.golang.org/grpc v1.83.1
+	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.11
 )
 
